@@ -510,10 +510,10 @@ void Step4<dim>::compute_information_content ()
 
   // Now compute the solutions corresponding to the possible
   // sources. Each source is active on exactly one cell.
-  std::vector<std::future<void>> tasks;
+  Threads::TaskGroup<void> tasks;
   for (unsigned int K=0; K<triangulation.n_active_cells(); ++K)
-    tasks.emplace_back(
-      std::async([&,K]()
+    tasks +=
+      Threads::new_task([&,K]()
                  {
                    Vector<double> rhs (information_dof_handler.n_dofs());
                    Vector<double> cell_rhs (dofs_per_cell);
@@ -570,11 +570,10 @@ void Step4<dim>::compute_information_content ()
                              information_content(K) += local_h_K_values[q_point] * local_h_K_values[q_point] / noise_level[n] / noise_level[n];
                      }
                  }
-      ));
+      );
 
   // And wait:
-  for (auto &f : tasks)
-    f.wait();
+  tasks.join_all();
 
   std::cout << std::endl;
 }
