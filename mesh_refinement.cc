@@ -703,11 +703,39 @@ void Step4<dim>::refine_grid ()
 	  * fe_values.JxW(q));
       }
   }
-  GridRefinement::refine_and_coarsen_fixed_number(triangulation,
-						  //refinement_indicators,
-						  information_content,
-						  0.2, 0.05);
-  triangulation.execute_coarsening_and_refinement ();
+
+  enum RefinementCriterion
+  {
+        global,
+        information_content,
+        indicator
+  };
+  const RefinementCriterion refinement_criterion = indicator;
+
+  switch (refinement_criterion)
+    {
+    case global:
+          triangulation.refine_global();
+          break;
+
+    case information_content:
+          GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                          this->information_content,
+                                                          0.2, 0.05);
+          triangulation.execute_coarsening_and_refinement ();
+          break;
+
+    case indicator:
+          GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                          refinement_indicators,
+                                                          0.2, 0.05);
+          triangulation.execute_coarsening_and_refinement ();
+          break;
+
+    default:
+          Assert (false, ExcInternalError());
+    }
+  
   bounce_measurement_points_to_cell_centers ();
 
 
@@ -724,7 +752,7 @@ void Step4<dim>::run ()
 
   make_grid();
 
-  for (unsigned int cycle=0; cycle<5; ++cycle)
+  for (unsigned int cycle=0; cycle<7; ++cycle)
   {
     std::cout << "---------- Cycle " << cycle << " ------------" << std::endl;
     
