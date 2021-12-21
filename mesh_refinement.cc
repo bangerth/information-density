@@ -27,6 +27,7 @@
 #include <deal.II/base/function.h>
 #include <deal.II/numerics/vector_tools.h>
 #include <deal.II/numerics/matrix_tools.h>
+#include <deal.II/numerics/derivative_approximation.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/full_matrix.h>
 #include <deal.II/lac/sparse_matrix.h>
@@ -675,62 +676,90 @@ void Step4<dim>::refine_grid ()
 {
   std::cout << "Refining the mesh..." << std::endl;
   
-  Vector<double> refinement_indicators (triangulation.n_active_cells());
-  {
-    QGauss<dim> quadrature(3);
-    FEValues<dim> fe_values (fe, quadrature, update_values | update_JxW_values);
-
-    FEValuesExtractors::Scalar lambda(1), f(2);
-
-    std::vector<double> lambda_values (quadrature.size());
-    std::vector<double> f_values (quadrature.size());
-
-    typename DoFHandler<dim>::active_cell_iterator
-    cell = dof_handler.begin_active(),
-    endc = dof_handler.end();
-
-    for (unsigned int index=0; cell!=endc; ++cell, ++index)
-      {
-        fe_values.reinit (cell);
-	fe_values[lambda].get_function_values (solution, lambda_values);
-	fe_values[f].get_function_values (solution, f_values);
-
-	for (unsigned int q=0; q<quadrature.size(); ++q)
-	  refinement_indicators(index)
-	  += (std::fabs (regularization_parameter * f_values[q]
-	  -
-	  lambda_values[q])
-	  * fe_values.JxW(q));
-      }
-  }
-
   enum RefinementCriterion
   {
         global,
         information_content,
-        indicator
+        indicator,
+        smoothness
   };
-  const RefinementCriterion refinement_criterion = indicator;
+  const RefinementCriterion refinement_criterion = smoothness;
 
   switch (refinement_criterion)
     {
     case global:
-          triangulation.refine_global();
-          break;
-
+    {
+      triangulation.refine_global();
+      break;
+    }
+    
     case information_content:
-          GridRefinement::refine_and_coarsen_fixed_number(triangulation,
-                                                          this->information_content,
-                                                          0.2, 0.05);
-          triangulation.execute_coarsening_and_refinement ();
-          break;
-
+    {
+      GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                      this->information_content,
+                                                      0.2, 0.05);
+      triangulation.execute_coarsening_and_refinement ();
+      break;
+    }
+    
     case indicator:
-          GridRefinement::refine_and_coarsen_fixed_number(triangulation,
-                                                          refinement_indicators,
-                                                          0.2, 0.05);
-          triangulation.execute_coarsening_and_refinement ();
-          break;
+    {
+      Vector<double> refinement_indicators (triangulation.n_active_cells());
+      
+      QGauss<dim> quadrature(3);
+      FEValues<dim> fe_values (fe, quadrature, update_values | update_JxW_values);
+
+      FEValuesExtractors::Scalar lambda(1), f(2);
+
+      std::vector<double> lambda_values (quadrature.size());
+      std::vector<double> f_values (quadrature.size());
+
+      typename DoFHandler<dim>::active_cell_iterator
+        cell = dof_handler.begin_active(),
+        endc = dof_handler.end();
+
+      for (unsigned int index=0; cell!=endc; ++cell, ++index)
+        {
+          fe_values.reinit (cell);
+          fe_values[lambda].get_function_values (solution, lambda_values);
+          fe_values[f].get_function_values (solution, f_values);
+
+          for (unsigned int q=0; q<quadrature.size(); ++q)
+            refinement_indicators(index)
+              += (std::fabs (regularization_parameter * f_values[q]
+                             -
+                             lambda_values[q])
+                  * fe_values.JxW(q));
+        }
+
+      GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                      refinement_indicators,
+                                                      0.2, 0.05);
+      triangulation.execute_coarsening_and_refinement ();
+      break;
+    }
+    
+    
+    case smoothness:
+    {
+      Vector<float> refinement_indicators (triangulation.n_active_cells());
+      
+      DerivativeApproximation::approximate_gradient(dof_handler,
+                                                    solution,
+                                                    refinement_indicators,
+                                                    /*component=*/2);
+      // and scale it to obtain an error indicator.
+      for (const auto &cell : triangulation.active_cell_iterators())
+        refinement_indicators[cell->active_cell_index()] *=
+          std::pow(cell->diameter(), 1 + 1.0 * dim / 2);
+      
+      
+      GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                      refinement_indicators,
+                                                      0.2, 0.05);
+      triangulation.execute_coarsening_and_refinement ();
+      break;
+    }
 
     default:
           Assert (false, ExcInternalError());
