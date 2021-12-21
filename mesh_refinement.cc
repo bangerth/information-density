@@ -683,7 +683,7 @@ void Step4<dim>::refine_grid ()
         indicator,
         smoothness
   };
-  const RefinementCriterion refinement_criterion = smoothness;
+  const RefinementCriterion refinement_criterion = information_content;
 
   switch (refinement_criterion)
     {
