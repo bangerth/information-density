@@ -32,6 +32,8 @@
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/sparse_direct.h>
+#include <deal.II/particles/particle_handler.h>
+#include <deal.II/particles/data_out.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <fstream>
@@ -94,8 +96,8 @@ class Step4
 template <int dim>
 Step4<dim>::Step4 ()
   :
-source_location (Point<dim>(-0.25,0)),
-source_radius (0.2),
+  source_location (Point<dim>(-0.25,0)),
+  source_radius (0.2),
   regularization_parameter (10000),
   fe (FE_Q<dim>(3), 1,  // c
       FE_Q<dim>(3), 1,  // lambda
@@ -119,6 +121,57 @@ source_radius (0.2),
                           0.2 * std::cos(2*numbers::PI * i/50));
       detector_locations.push_back (p);
     }
+
+  // Generate the grid we will work on:
+  GridGenerator::hyper_cube (triangulation, -1, 1);
+  triangulation.refine_global (4);
+
+  // The detector locations are static, so we can already here
+  // generate a file that contains their locations
+  {
+    Particles::ParticleHandler<dim> particle_handler(triangulation,
+                                                     StaticMappingQ1<dim>::mapping);
+    for (const auto &loc : detector_locations)
+      {
+        Particles::Particle<dim> new_particle;
+        new_particle.set_location(loc);
+        // Insert the particle. It is a lie that the particle is in
+        // the first cell, but nothing we do actually cares about the
+        // cell a particle is in.
+        particle_handler.insert_particle(new_particle,
+                                         triangulation.begin_active());
+      }
+  
+    Particles::DataOut<dim> particle_out;
+    particle_out.build_patches(particle_handler);
+    std::ofstream output("detector_locations.vtu");
+    particle_out.write_vtu(output);
+  }
+  
+  // While we're generating output, also output the source location. Do this
+  // by outputting many (1000) points that indicate the perimeter of the source
+  {
+    Particles::ParticleHandler<dim> particle_handler(triangulation,
+                                                     StaticMappingQ1<dim>::mapping);
+
+    const unsigned int n_points = 1000;
+    for (unsigned int i=0; i<n_points; ++i)
+      {
+        Point<dim> loc = source_location;
+        loc[0] += source_radius * std::cos(2*numbers::PI*i/n_points);
+        loc[1] += source_radius * std::sin(2*numbers::PI*i/n_points);
+        
+        Particles::Particle<dim> new_particle;
+        new_particle.set_location(loc);
+        particle_handler.insert_particle(new_particle,
+                                         triangulation.begin_active());
+      }
+    
+    Particles::DataOut<dim> particle_out;
+    particle_out.build_patches(particle_handler);
+    std::ofstream output("source_locations.vtu");
+    particle_out.write_vtu(output);
+  }
 }
 
 
@@ -250,8 +303,6 @@ void Step4<dim>::compute_synthetic_measurements ()
 template <int dim>
 void Step4<dim>::make_grid ()
 {
-  GridGenerator::hyper_cube (triangulation, -1, 1);
-  triangulation.refine_global (4);
   compute_synthetic_measurements ();
   bounce_measurement_points_to_cell_centers ();
 }
