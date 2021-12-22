@@ -671,6 +671,20 @@ void Step4<dim>::output_results (const unsigned int cycle) const
   std::ofstream output (filename.c_str());
   data_out.write_vtu (output);
 
+
+  // Now output the individual blocks of the matrix into files.
+  auto write_block = [&](const unsigned int block_i,
+                         const unsigned int block_j,
+                         const std::string &filename)
+                       {
+                         std::ofstream o(filename);
+                         system_matrix.block(block_i,block_j).print (o);
+                       };
+  write_block(0,0, "matrix-" + std::to_string(cycle) + "-A.txt");
+  write_block(0,2, "matrix-" + std::to_string(cycle) + "-B.txt");
+  write_block(1,0, "matrix-" + std::to_string(cycle) + "-C.txt");
+  write_block(2,2, "matrix-" + std::to_string(cycle) + "-M.txt");  
+  
   std::cout << std::endl;
 }
 
