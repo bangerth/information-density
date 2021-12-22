@@ -18,6 +18,7 @@
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
 #include <deal.II/dofs/dof_accessor.h>
+#include <deal.II/dofs/dof_renumbering.h>
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_dgq.h>
 #include <deal.II/fe/fe_system.h>
@@ -28,10 +29,10 @@
 #include <deal.II/numerics/vector_tools.h>
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/derivative_approximation.h>
-#include <deal.II/lac/vector.h>
+#include <deal.II/lac/block_vector.h>
 #include <deal.II/lac/full_matrix.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/block_sparse_matrix.h>
+#include <deal.II/lac/block_sparsity_pattern.h>
 #include <deal.II/lac/sparse_direct.h>
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/data_out.h>
@@ -78,11 +79,11 @@ class Step4
 
     AffineConstraints<double> hanging_node_constraints;
 
-    SparsityPattern      sparsity_pattern;
-    SparseMatrix<double> system_matrix;
+    BlockSparsityPattern      sparsity_pattern;
+    BlockSparseMatrix<double> system_matrix;
 
-    Vector<double>       solution;
-    Vector<double>       system_rhs;
+    BlockVector<double>       solution;
+    BlockVector<double>       system_rhs;
 
     Vector<double>       information_content;
 
@@ -332,6 +333,7 @@ void Step4<dim>::setup_system ()
             << std::endl;
   
   dof_handler.distribute_dofs (fe);
+  DoFRenumbering::component_wise (dof_handler);
 
   hanging_node_constraints.clear ();
   DoFTools::make_hanging_node_constraints(dof_handler,
@@ -345,15 +347,17 @@ void Step4<dim>::setup_system ()
             << dof_handler.n_dofs()
             << std::endl;
 
-  DynamicSparsityPattern c_sparsity(dof_handler.n_dofs());
+  const std::vector<types::global_dof_index> dofs_per_component =
+    DoFTools::count_dofs_per_fe_component(dof_handler);
+  BlockDynamicSparsityPattern c_sparsity(dofs_per_component,dofs_per_component);
   DoFTools::make_sparsity_pattern (dof_handler, c_sparsity);
   hanging_node_constraints.condense(c_sparsity);
   sparsity_pattern.copy_from(c_sparsity);
 
   system_matrix.reinit (sparsity_pattern);
 
-  solution.reinit (dof_handler.n_dofs());
-  system_rhs.reinit (dof_handler.n_dofs());
+  solution.reinit (dofs_per_component);
+  system_rhs.reinit (dofs_per_component);
 }
 
 
