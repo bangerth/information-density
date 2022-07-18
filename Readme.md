@@ -15,18 +15,19 @@ external stimuli. The specific example this program addresses is that
 we want to identify the source term (i.e., right hand side function)
 in an advection-diffusion equation from point measurements of the
 solution of the equation. A typical application is that we would like
-to find out the locations and strength of pollution sources based on
+to find out the locations and strengths of pollution sources based on
 measuring the concentration of the polluting substance at a number of
 points.
 
 It is clear that in order to solve such problems, one needs to "know"
-something about the system's state (here: the pollution
-concentration) through measurements. Intuitively, it is also clear
-that we know "more" about the pollution sources by measuring
-*downstream* from the sources than we would if we had measured
-*upstream*. Intuitive concepts such as this motivate wondering whether
-we can define an "information density" function whose value at a point
-$x$ describes how much we know about potential sources located at $x$.
+something about the system's state (here: the pollution concentration)
+through measurements. Intuitively, it is also clear that we know
+"more" about the pollution sources by (i) measuring at more points,
+and (ii) by measuring *downstream* from the sources than we would if
+we had measured *upstream*. Intuitive concepts such as this motivate
+wondering whether we can define an "information density" function
+whose value at a point $\mathbf x$ describes how much we know about potential
+sources located at $\mathbf x$.
 
 The paper which this code accompanies explores the concept of
 information in inverse problems. It defines an "information density"
@@ -52,7 +53,7 @@ compiling everything again.
 
 The program contains a switch that decides which mesh refinement
 algorithm to use. By default, it refines the mesh based on the
-information criterion discussed in the paper, and then runs a sequence
+information criterion discussed in the paper; it runs a sequence
 of 7 mesh refinement cycles. In debug mode, running the program as
 is takes about 50 CPU minutes on a reasonably modern laptop. (The
 program takes about five and a half minutes in release mode.) It
@@ -63,6 +64,8 @@ For each cycle, it outputs the solution as a VTU file, along with the
 $A$, $B$, $C$, and $M$ matrices discussed in the paper. These matrices
 can then be used to compute the eigenvalues of the $H$ matrix defined
 by $H = B^T A^{-T} C A^{-1} B + \beta M$ where $\beta$ is the
-regularization parameters. Some of the pictures shown in the paper are
-also reproduced as part of this code gallery program.
+regularization parameters.
+
+Some of the pictures shown in the paper are also reproduced as part of
+this code gallery program. See the paper for captions and more information.
 
