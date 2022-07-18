@@ -1,14 +1,21 @@
-﻿/* $Id: step-4.cc 24093 2011-08-16 13:58:12Z bangerth $ */
-/* Author: Wolfgang Bangerth, University of Heidelberg, 1999 */
+﻿/* ---------------------------------------------------------------------
+ *
+ * Copyright (C) 2022 by the deal.II authors and Wolfgang Bangerth.
+ *
+ * This file is part of the deal.II library.
+ *
+ * The deal.II library is free software; you can use it, redistribute
+ * it, and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * The full text of the license can be found in the file LICENSE.md at
+ * the top level directory of deal.II.
+ *
+ * ---------------------------------------------------------------------
 
-/*    $Id: step-4.cc 24093 2011-08-16 13:58:12Z bangerth $       */
-/*                                                                */
-/*    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 by the deal.II authors */
-/*                                                                */
-/*    This file is subject to QPL and may not be  distributed     */
-/*    without copyright and license information. Please refer     */
-/*    to the file deal.II/doc/license.html for the  text  and     */
-/*    further information on this license.                        */
+ *
+ * Author: Wolfgang Bangerth, Colorado State University, 2022.
+ */
 
 
 #include <deal.II/base/numbers.h>
@@ -260,7 +267,7 @@ void Step4<dim>::compute_synthetic_measurements ()
     std::map<unsigned int, double> boundary_values;
     VectorTools::interpolate_boundary_values (forward_dof_handler,
                                               0,
-                                              ZeroFunction<dim>(),
+                                              Functions::ZeroFunction<dim>(),
                                               boundary_values);
     Vector<double> tmp (forward_dof_handler.n_dofs());
     MatrixTools::apply_boundary_values (boundary_values,
@@ -459,7 +466,7 @@ void Step4<dim>::assemble_system ()
   component_mask[2] = false;
   VectorTools::interpolate_boundary_values (dof_handler,
                                             0,
-                                            ZeroFunction<dim>(3),
+                                            Functions::ZeroFunction<dim>(3),
                                             boundary_values,
                                             component_mask);
   MatrixTools::apply_boundary_values (boundary_values,
@@ -551,7 +558,7 @@ void Step4<dim>::compute_information_content ()
     std::map<unsigned int, double> boundary_values;
     VectorTools::interpolate_boundary_values (information_dof_handler,
                                               0,
-                                              ZeroFunction<dim>(),
+                                              Functions::ZeroFunction<dim>(),
                                               boundary_values);
     Vector<double> tmp (information_dof_handler.n_dofs());
     MatrixTools::apply_boundary_values (boundary_values,
